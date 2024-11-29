@@ -28,21 +28,32 @@
         /// </summary>
         private void InitializeComponent()
         {
+            this.components = new System.ComponentModel.Container();
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(ScratchForm));
+            this.UpdateTimer = new System.Windows.Forms.Timer(this.components);
             this.SuspendLayout();
+            // 
+            // UpdateTimer
+            // 
+            this.UpdateTimer.Enabled = true;
+            this.UpdateTimer.Interval = 16;
+            this.UpdateTimer.Tick += this.UpdateTimer_Tick;
             // 
             // ScratchForm
             // 
             this.AutoScaleDimensions = new SizeF(13F, 32F);
             this.AutoScaleMode = AutoScaleMode.Font;
-            this.ClientSize = new Size(731, 743);
+            this.ClientSize = new Size(732, 742);
             this.DoubleBuffered = true;
             this.FormBorderStyle = FormBorderStyle.FixedSingle;
+            this.Icon = (Icon)resources.GetObject("$this.Icon");
+            this.Margin = new Padding(4, 2, 4, 2);
             this.MaximizeBox = false;
             this.MinimizeBox = false;
             this.Name = "ScratchForm";
             this.ShowIcon = false;
-            this.ShowInTaskbar = false;
             this.Text = "ScratchForm";
+            this.FormClosing += this.ScratchForm_FormClosing;
             this.Paint += this.Form1_Paint;
             this.MouseDown += this.ScratchForm_MouseDown;
             this.MouseMove += this.ScratchForm_MouseMove;
@@ -51,5 +62,7 @@
         }
 
         #endregion
+
+        private System.Windows.Forms.Timer UpdateTimer;
     }
 }

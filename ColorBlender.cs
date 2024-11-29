@@ -1,6 +1,6 @@
 namespace DigitalScratchie;
 
-public class ColorBlender
+internal class ColorBlender
 {
     public static Color BlendColors(Color color1, Color color2)
     {

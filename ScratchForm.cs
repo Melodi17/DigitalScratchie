@@ -1,14 +1,26 @@
+using System.Drawing.Imaging;
+
 namespace DigitalScratchie
 {
-    public partial class ScratchForm : Form
+    internal partial class ScratchForm : Form
     {
-        private ScratchRenderer sr = new();
         private ScratchTicket st;
         private bool mouseDown;
-        public ScratchForm(ScratchTicket ticket)
+        private Bitmap baseLayer;
+        private Bitmap scratchLayer;
+        private int penSize;
+        private string? path;
+        private bool isDirty = false;
+        public ScratchForm(ScratchTicket ticket, string? path)
         {
-            st = ticket;
-            InitializeComponent();
+            this.st = ticket;
+            this.path = path;
+            this.baseLayer = new Bitmap(ticket.BaseLayer);
+            this.scratchLayer = new Bitmap(ticket.ScratchLayer);
+
+            this.penSize = (int)(Math.Sqrt(ticket.Width * ticket.Height) / 15);
+
+            this.InitializeComponent();
 
             this.SetStyle(ControlStyles.UserPaint, true);
             this.SetStyle(ControlStyles.AllPaintingInWmPaint, true);
@@ -22,29 +34,55 @@ namespace DigitalScratchie
 
         private void Form1_Paint(object sender, PaintEventArgs e)
         {
-            e.Graphics.DrawImage(sr.GetRenderedImage(st), 0, 0);
+            e.Graphics.DrawImage(this.baseLayer, 0, 0);
+            e.Graphics.DrawImage(this.scratchLayer.FastMask(st.ScratchMask, true), 0, 0);
         }
 
-        private void ScratchForm_MouseDown(object sender, MouseEventArgs e) => mouseDown = true;
+        private void ScratchForm_MouseDown(object sender, MouseEventArgs e)
+        {
+            if (ModifierKeys == Keys.Shift)
+            {
+                Bitmap bmp = (Bitmap)this.baseLayer.Clone();
+                using Graphics g = Graphics.FromImage(bmp);
+                g.DrawImage(this.scratchLayer.FastMask(st.ScratchMask, true), 0, 0);
+                
+                var filename = "ticket.png";
+                var path = Path.Combine(Path.GetTempPath(), filename);
+                bmp.Save(path, ImageFormat.Png);
 
-        private void ScratchForm_MouseUp(object sender, MouseEventArgs e) => mouseDown = false;
+                DoDragDrop(new DataObject(DataFormats.FileDrop, new[] {path}), DragDropEffects.Copy);
+                return;
+            }
+            
+            this.mouseDown = true;
+        }
+
+        private void ScratchForm_MouseUp(object sender, MouseEventArgs e) => this.mouseDown = false;
 
         private void ScratchForm_MouseMove(object sender, MouseEventArgs e)
         {
-            if (!mouseDown) return;
+            if (!this.mouseDown) return;
 
-            if (e.X < 0 || e.Y < 0 || e.X >= st.ScratchMask.GetLength(0) || e.Y >= st.ScratchMask.GetLength(1))
+            if (e.X < 0 || e.Y < 0 || e.X >= this.st.Width || e.Y >= this.st.Height)
                 return;
 
-            // st.ScratchMask[e.X, e.Y] = true;
-            SetScratchMaskRadius(e.X, e.Y, 10);
-            this.Refresh();
+            this.SetScratchMaskRadius(e.X, e.Y, this.penSize);
+            this.isDirty = true;
         }
-        
+
+        private void ScratchForm_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            if (this.path != null)
+                this.st.Save(this.path);
+            
+            this.baseLayer.Dispose();
+            this.scratchLayer.Dispose();
+        }
+
         private void SetScratchMaskRadius(int x, int y, int radius)
         {
-            int width = st.ScratchMask.GetLength(0);
-            int height = st.ScratchMask.GetLength(1);
+            int width = this.st.ScratchMask.GetLength(0);
+            int height = this.st.ScratchMask.GetLength(1);
 
             for (int i = -radius; i <= radius; i++)
             {
@@ -55,10 +93,19 @@ namespace DigitalScratchie
 
                     if (newX >= 0 && newY >= 0 && newX < width && newY < height && (i * i + j * j <= radius * radius))
                     {
-                        st.ScratchMask[newX, newY] = true;
+                        this.st.ScratchMask[newX, newY] = true;
                     }
                 }
             }
+        }
+
+        private void UpdateTimer_Tick(object sender, EventArgs e)
+        {
+            if (!this.isDirty)
+                return;
+            
+            this.Refresh();
+            this.isDirty = false;
         }
     }
 }
